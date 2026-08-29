@@ -302,6 +302,23 @@ button { min-height: 40px; }
 .tabs .tab{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .tabs .tab.on{background:#111827 !important;color:#fff !important}
 
+
+/* v12: 期間タブは押した瞬間に選択状態を反映 */
+.tabs .tab{
+  cursor:pointer !important;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.tabs .tab.on{
+  background:#111827 !important;
+  color:#fff !important;
+  opacity:1 !important;
+}
+.tabs .tab:not(.on){
+  background:#e5e7eb !important;
+  color:#2563eb !important;
+}
+
 </style>
 </head>
 <body>
@@ -421,6 +438,12 @@ function renderUser(){
 function tab(p,t){return `<button class="tab ${period===p?'on':''}" onclick="switchPeriod('${p}')">${t}</button>`}
 function switchPeriod(p){
   period=p;
+  // タブ自体は再描画されないため、選択状態をその場で更新する
+  document.querySelectorAll('.tabs .tab').forEach(b=>{
+    const text=b.textContent.trim();
+    const active=(p==='current'&&text==='今月')||(p==='next'&&text==='来月')||(p==='past'&&text==='過去');
+    b.classList.toggle('on',active);
+  });
   if(document.getElementById('adminEvents')) renderAdminLists();
   else renderEvents();
 }
