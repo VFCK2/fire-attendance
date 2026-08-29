@@ -297,6 +297,11 @@ button { min-height: 40px; }
   font-size:13px !important;
 }
 
+
+/* v11: 今月・来月・過去タブの選択状態を確実に更新 */
+.tabs .tab{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.tabs .tab.on{background:#111827 !important;color:#fff !important}
+
 </style>
 </head>
 <body>
@@ -413,7 +418,12 @@ function renderUser(){
  <div class="tabs">${tab('current','今月')}${tab('next','来月')}${tab('past','過去')}</div><div id="events"></div></main>`;
  renderEvents();
 }
-function tab(p,t){return `<button class="tab ${period===p?'on':''}" onclick="period='${p}';renderEvents()">${t}</button>`}
+function tab(p,t){return `<button class="tab ${period===p?'on':''}" onclick="switchPeriod('${p}')">${t}</button>`}
+function switchPeriod(p){
+  period=p;
+  if(document.getElementById('adminEvents')) renderAdminLists();
+  else renderEvents();
+}
 function filtered(){
  const now=new Date(), y=now.getFullYear(),m=now.getMonth();
  return DATA.events.filter(e=>{
