@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#111827">
+<title>消防団 出欠管理</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;width:100%;min-width:0;background:#f2f4f7;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Yu Gothic","Noto Sans JP",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit}
+button{touch-action:manipulation}
+#app{min-height:100vh}
+.header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,.06);padding-top:env(safe-area-inset-top)}
+.header-in{min-height:76px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.logo{font-size:clamp(24px,7vw,34px);font-weight:900;white-space:nowrap}
+.header-actions{display:flex;gap:6px}
+.topbtn{min-width:82px;height:54px;border:0;border-radius:13px;background:#111827;color:#fff;font-weight:900;font-size:18px}
+.main{padding:12px 10px calc(42px + env(safe-area-inset-bottom))}
+.card,.adminbox{background:#fff;border-radius:18px;padding:17px;margin-bottom:13px;box-shadow:0 2px 9px rgba(0,0,0,.07)}
+.label,.section-title{font-size:clamp(21px,5.5vw,28px);font-weight:900;margin-bottom:9px}
+.select,.input{width:100%;height:62px;border:3px solid #d1d5db;border-radius:13px;background:#fff;padding:0 13px;font-size:clamp(20px,5.5vw,27px);font-weight:900}
+.input{margin-bottom:10px}
+textarea.input{height:78px;padding-top:11px}
+.register-note{margin-top:10px;color:#6b7280;font-size:16px;line-height:1.5;font-weight:700}
+.linkbtn{border:0;background:none;padding:8px 0;color:#2563eb;font-weight:900;font-size:17px}
+.event{background:#fff;border-radius:18px;padding:18px 15px 20px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.07)}
+.date{font-size:22px;font-weight:900;color:#374151}
+.title{font-size:clamp(29px,8vw,39px);font-weight:900;line-height:1.25;margin:4px 0 14px;word-break:break-word}
+.info{display:grid;gap:8px;margin-bottom:15px}
+.info div{padding:11px 13px;border-radius:13px;font-size:20px;font-weight:900;line-height:1.35;word-break:break-word}
+.loc{background:#e0f2fe;border:3px solid #7dd3fc;color:#075985}
+.sup{background:#fff7ed;border:3px solid #fdba74;color:#9a3412}
+.answer-title{font-size:21px;font-weight:900;margin:11px 0 8px}
+.answers{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.ab{height:105px;border:0;border-radius:15px;font-size:52px;font-weight:900}
+.ab small{display:block;font-size:19px;margin-top:2px}
+.ok{background:#dcfce7;color:#166534}.maybe{background:#fef3c7;color:#92400e}.no{background:#fee2e2;color:#991b1b}
+.ab.sel{box-shadow:inset 0 0 0 5px #111827}
+.status{text-align:center;margin-top:9px;padding:9px;border-radius:10px;background:#f3f4f6;font-size:19px;font-weight:900}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:14px}
+.sum{background:#f8fafc;border-radius:10px;text-align:center;padding:8px 2px;font-size:16px;font-weight:900}
+.sum b{display:block;font-size:29px;margin-top:2px}
+.member-list{margin-top:8px}
+.member-row{display:grid;grid-template-columns:minmax(0,1fr) 66px 66px;gap:6px;align-items:center;min-height:56px;border-bottom:1px solid #e5e7eb}
+.member-name{font-size:19px;font-weight:900;word-break:break-word}
+.manswer{text-align:center;padding:7px 2px;border-radius:9px;font-size:23px;font-weight:900}
+.actual-mini{text-align:center;font-size:16px;font-weight:900;color:#166534}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.tab{height:52px;border:0;border-radius:12px;background:#e5e7eb;font-size:18px;font-weight:900}
+.tab.on{background:#111827;color:#fff}
+.admin-event{padding:15px 0;border-bottom:1px solid #e5e7eb}
+.admin-event:last-child{border-bottom:0}
+.admin-title{font-size:24px;font-weight:900}
+.admin-sub{color:#6b7280;font-weight:800;margin-top:3px}
+.admin-summary{margin:9px 0;padding:9px;background:#f8fafc;border-radius:10px;font-weight:900;font-size:17px}
+.admin-person{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,48px) 82px;gap:4px;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+.admin-person-name{font-size:17px;font-weight:900;word-break:break-word}
+.smallab{height:44px;border:0;border-radius:9px;font-size:23px;font-weight:900}
+.smallab.sel{box-shadow:inset 0 0 0 3px #111827}
+.actual{height:44px;border:0;border-radius:9px;background:#f3f4f6;font-size:15px;font-weight:900}
+.actual.checked{background:#dcfce7;color:#166534;box-shadow:inset 0 0 0 3px #166534}
+.actionrow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}
+.actionrow button,.wide{min-height:54px;border:0;border-radius:11px;font-size:18px;font-weight:900}
+.dark{background:#111827;color:#fff}.light{background:#e5e7eb;color:#111827}.red{background:#dc2626;color:#fff}
+.center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}
+.dialog{width:100%;max-width:520px;background:#fff;border-radius:20px;padding:22px 17px;box-shadow:0 5px 24px rgba(0,0,0,.1)}
+.dialog h1{font-size:30px;text-align:center;margin:0 0 8px}.dialog p{text-align:center;color:#6b7280;font-weight:800;line-height:1.5}
+.msg{padding:10px;border-radius:10px;background:#fff7ed;color:#9a3412;font-weight:900;margin:8px 0;display:none}
+.loading{position:fixed;inset:0;z-index:100;background:rgba(255,255,255,.76);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center}
+.loading span{background:#111827;color:#fff;padding:14px 20px;border-radius:13px;font-weight:900;font-size:19px}
+.toast{position:fixed;left:50%;bottom:calc(15px + env(safe-area-inset-bottom));z-index:110;width:calc(100% - 24px);transform:translateX(-50%);background:#111827;color:#fff;padding:14px;border-radius:12px;text-align:center;font-weight:900;font-size:18px;display:none}
+.empty{text-align:center;color:#6b7280;padding:35px 8px;font-size:21px;font-weight:900}
+@media(max-width:390px){.admin-person{grid-template-columns:minmax(0,1fr) repeat(3,43px) 74px}.actual{font-size:13px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
+<div class="toast" id="toast"></div>
+<script>
+/* ===== 設定 =====
+   GitHub Pagesへ公開したら、ここだけ自分のGAS WebアプリURLに変更。
+*/
+const API_URL = 'https://script.google.com/macros/s/AKfycbzKiLUJAcjeVrmD4o3_ocLun2ViHmVplEVaFXMf5S5DMsuVc8_EQ55KU3t2E0Q_wOyb/exec';
+const KEY='fire_attendance_device_token_v1';
+let DATA={members:[],events:[],answers:{}}, currentMember='', adminPin='', period='current', busy=false;
+
+document.addEventListener('DOMContentLoaded',start);
+
+function start(){
+  if(!API_URL.startsWith('https://')) return setupMessage();
+  const token=localStorage.getItem(KEY);
+  if(token) loadUser(token).catch(()=>showRegister());
+  else showRegister();
+}
+function setupMessage(){
+  document.getElementById('app').innerHTML=`<div class="center"><div class="dialog"><h1>🚒 消防団 出欠管理</h1><p>まだ接続先が設定されていません。<br>index.htmlのAPI_URLにGASのウェブアプリURLを設定してください。</p></div></div>`;
+}
+function jsonp(action,params={}){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const script=document.createElement('script');
+    const q=new URLSearchParams({action,callback:cb,...Object.fromEntries(Object.entries(params).map(([k,v])=>[k,String(v)]))});
+    let done=false;
+    const timer=setTimeout(()=>finish(new Error('通信がタイムアウトしました')),15000);
+    window[cb]=(res)=>finish(null,res);
+    function finish(err,res){
+      if(done)return; done=true; clearTimeout(timer);
+      try{delete window[cb]}catch(_){}
+      script.remove();
+      if(err)reject(err);
+      else if(!res||res.ok===false)reject(new Error(res?.error||'エラーが発生しました'));
+      else resolve(res);
+    }
+    script.onerror=()=>finish(new Error('通信に失敗しました'));
+    script.src=API_URL+(API_URL.includes('?')?'&':'?')+q.toString();
+    document.body.appendChild(script);
+  });
+}
+async function loadUser(token){
+  setLoading(true,'データを読み込み中…');
+  try{const r=await jsonp('data',{token}); DATA=r.data; currentMember=r.member; renderUser();}
+  finally{setLoading(false)}
+}
+function showRegister(){
+  setLoading(false);
+  document.getElementById('app').innerHTML=`<div class="center"><div class="dialog">
+    <h1>🚒 消防団 出欠管理</h1>
+    <p>初回だけ利用者を登録してください。<br>登録後はこの端末が覚えます。</p>
+    <div class="msg" id="msg"></div>
+    <div class="label">団員名</div>
+    <input class="input" id="regName" type="text" autocomplete="name" placeholder="団員名を入力">
+    <div class="label" style="margin-top:13px">登録コード</div>
+    <input class="input" id="regCode" type="password" inputmode="numeric" placeholder="登録コード">
+    <button class="wide dark" onclick="register()">この端末を登録</button>
+    <div class="register-note">登録を間違えても、あとから「利用者変更」で直せます。</div>
+  </div></div>`;
+/* 名前一覧は登録コードを確認した後に取得 */
+  const code=document.getElementById('regCode');
+  code.addEventListener('change',async()=>{ if(code.value.trim()) await loadRegisterNames(code.value.trim()); });
+}
+function register(){
+  const name=document.getElementById('regName').value.trim();
+  const code=document.getElementById('regCode').value.trim();
+  if(!name||!code){showMsg('団員名と登録コードを入力してください');return}
+  doRegister(name,code);
+}
+async function doRegister(name,code){
+  setLoading(true,'登録しています…');
+  try{
+    const r=await jsonp('register',{name,code});
+    localStorage.setItem(KEY,r.token); DATA=r.data; currentMember=r.member; renderUser(); toast('✓ この端末を登録しました');
+  }catch(e){showMsg(e.message)}finally{setLoading(false)}
+}
+function fillNames(names){
+  const s=document.getElementById('regName'); if(!s)return;
+  s.innerHTML='<option value="">選択してください</option>'+names.map(n=>`<option>${esc(n)}</option>`).join('');
+}
+function renderUser(){
+ document.getElementById('app').innerHTML=`<header class="header"><div class="header-in"><div class="logo">🚒 消防団 出欠</div><div class="header-actions"><button class="topbtn" onclick="changeMember()">利用者変更</button><button class="topbtn" onclick="adminLogin()">管理者</button></div></div></header><main class="main">
+ <div class="card"><div class="label">利用者</div><div style="font-size:27px;font-weight:900">${esc(currentMember)} さん</div><button class="linkbtn" onclick="changeMember()">利用者を変更する</button></div>
+ <div class="tabs">${tab('current','今月')}${tab('next','来月')}${tab('past','過去')}</div><div id="events"></div></main>`;
+ renderEvents();
+}
+function tab(p,t){return `<button class="tab ${period===p?'on':''}" onclick="period='${p}';renderEvents()">${t}</button>`}
+function filtered(){
+ const now=new Date(), y=now.getFullYear(),m=now.getMonth();
+ return DATA.events.filter(e=>{
+   const d=new Date(e.date+'T00:00:00'), ey=d.getFullYear(), em=d.getMonth();
+   if(period==='current')return ey===y&&em===m;
+   if(period==='next'){let nm=m+1,ny=y;if(nm>11){nm=0;ny++}return ey===ny&&em===nm}
+   return d<new Date(y,m,1);
+ });
+}
+function renderEvents(){
+ const a=filtered(); const box=document.getElementById('events'); if(!box)return;
+ box.innerHTML=a.length?a.map(eventCard).join(''):`<div class="empty">この期間の行事はありません</div>`;
+}
+function eventCard(e){
+ const key=e.id+'||'+currentMember,my=DATA.answers[key]?.answer||'',c=counts(e.id);
+ const rows=DATA.members.map(n=>{const d=DATA.answers[e.id+'||'+n]||{};return `<div class="member-row"><div class="member-name">${esc(n)}</div><div class="actual-mini">${d.actual?'✓ 出席':''}</div><div class="manswer" style="${ansStyle(d.answer)}">${d.answer||'－'}</div></div>`}).join('');
+ return `<section class="event"><div class="date">${fmt(e.date)}</div><div class="title">${esc(e.title)}</div>
+ ${e.location||e.supplies?`<div class="info">${e.location?`<div class="loc">📍 集合場所<br>${esc(e.location)}</div>`:''}${e.supplies?`<div class="sup">🧤 持ち物<br>${esc(e.supplies).replace(/\n/g,'<br>')}</div>`:''}</div>`:''}
+ <div class="answer-title">${esc(currentMember)} さんの回答</div>
+ <div class="answers"><button class="ab ok ${my==='○'?'sel':''}" onclick="setMyAnswer('${js(e.id)}','○')">○<small>参加</small></button><button class="ab maybe ${my==='△'?'sel':''}" onclick="setMyAnswer('${js(e.id)}','△')">△<small>未定</small></button><button class="ab no ${my==='×'?'sel':''}" onclick="setMyAnswer('${js(e.id)}','×')">×<small>欠席</small></button></div>
+ <div class="status">${my?'現在：'+my:'まだ回答していません'}</div>
+ <div class="summary"><div class="sum">○ 参加<b>${c.ok}</b></div><div class="sum">△ 未定<b>${c.maybe}</b></div><div class="sum">× 欠席<b>${c.no}</b></div><div class="sum">✓ 出席<b>${c.actual}</b></div></div>
+ <div class="answer-title">👥 団員の回答</div><div class="member-list">${rows}</div></section>`;
+}
+async function setMyAnswer(id,val){
+ const key=id+'||'+currentMember;
+ const old=DATA.answers[key]?.answer||'';
+ if(old===val)return;
+ if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};
+ DATA.answers[key].answer=val; renderEvents(); toast('保存中…');
+ try{
+   await jsonp('setAnswer',{token:localStorage.getItem(KEY),eventId:id,member:currentMember,answer:val});
+   toast('✓ 保存しました');
+ }catch(e){DATA.answers[key].answer=old;renderEvents();toast(e.message)}
+}
+function counts(id){let ok=0,maybe=0,no=0,actual=0;DATA.members.forEach(n=>{const d=DATA.answers[id+'||'+n];if(!d)return;if(d.answer==='○')ok++;if(d.answer==='△')maybe++;if(d.answer==='×')no++;if(d.actual)actual++});return{ok,maybe,no,actual}}
+function changeMember(){
+ const code=prompt('利用者を変更します。登録コードを入力してください'); if(code===null)return;
+ const name=prompt('変更後の団員名を入力してください'); if(name===null)return;
+ if(!name.trim()||!code.trim())return;
+ setLoading(true,'利用者を変更しています…');
+ jsonp('changeMember',{token:localStorage.getItem(KEY),name:name.trim(),code:code.trim()})
+ .then(r=>{DATA=r.data;currentMember=r.member;renderUser();toast('✓ 利用者を変更しました')})
+ .catch(e=>toast(e.message)).finally(()=>setLoading(false));
+}
+function adminLogin(){
+ const pin=prompt('管理者PINを入力してください'); if(pin===null)return;
+ setLoading(true,'確認しています…');
+ jsonp('checkAdmin',{pin}).then(r=>{if(!r.valid)throw new Error('PINが違います');adminPin=pin;return jsonp('adminData',{pin})}).then(r=>{DATA=r.data;period='current';renderAdmin();}).catch(e=>toast(e.message)).finally(()=>setLoading(false));
+}
+function renderAdmin(){
+ document.getElementById('app').innerHTML=`<header class="header"><div class="header-in"><div class="logo">🔧 管理者</div><button class="topbtn" onclick="renderUser()">使用者</button></div></header><main class="main">
+ <section class="adminbox"><div class="section-title">📅 行事を追加</div><input id="edate" class="input" type="date"><input id="etitle" class="input" placeholder="行事名"><input id="eloc" class="input" placeholder="集合場所"><textarea id="esup" class="input" placeholder="持ち物"></textarea><button class="wide dark" onclick="addEvent()">＋ 行事を追加</button></section>
+ <section class="adminbox"><div class="section-title">👥 団員を追加</div><input id="mname" class="input" placeholder="団員名"><button class="wide dark" onclick="addMember()">＋ 団員を追加</button></section>
+ <section class="adminbox"><div class="section-title">📅 出欠・実参加管理</div><div class="tabs">${tab('current','今月')}${tab('next','来月')}${tab('past','過去')}</div><div id="adminEvents"></div></section>
+ <section class="adminbox"><div class="section-title">👥 団員一覧</div><div id="adminMembers"></div></section>
+ </main>`;
+ renderAdminLists();
+}
+function renderAdminLists(){
+ const ev=document.getElementById('adminEvents'), ms=document.getElementById('adminMembers'); if(!ev)return;
+ const a=filtered(); ev.innerHTML=a.length?a.map(adminEvent).join(''):`<div class="empty">行事はありません</div>`;
+ ms.innerHTML=DATA.members.map(n=>`<div class="admin-event"><div class="admin-title">${esc(n)}</div><div class="actionrow"><button class="light" onclick="editMember('${js(n)}')">名前変更</button><button class="red" onclick="delMember('${js(n)}')">削除</button></div></div>`).join('')||'<div class="empty">団員はありません</div>';
+}
+function adminEvent(e){
+ const c=counts(e.id);
+ const people=DATA.members.map(n=>{
+   const d=DATA.answers[e.id+'||'+n]||{}, a=d.answer||'';
+   return `<div class="admin-person"><div class="admin-person-name">${esc(n)}</div>
+    <button class="smallab ok ${a==='○'?'sel':''}" onclick="adminAnswer('${js(e.id)}','${js(n)}','○')">○</button>
+    <button class="smallab maybe ${a==='△'?'sel':''}" onclick="adminAnswer('${js(e.id)}','${js(n)}','△')">△</button>
+    <button class="smallab no ${a==='×'?'sel':''}" onclick="adminAnswer('${js(e.id)}','${js(n)}','×')">×</button>
+    <button class="actual ${d.actual?'checked':''}" onclick="adminActual('${js(e.id)}','${js(n)}',${!d.actual})">${d.actual?'✓ 出席':'実参加'}</button></div>`;
+ }).join('');
+ return `<div class="admin-event"><div class="admin-title">${esc(e.title)}</div><div class="admin-sub">${fmt(e.date)}</div>
+ ${e.location||e.supplies?`<div class="info" style="margin-top:8px">${e.location?`<div class="loc">📍 ${esc(e.location)}</div>`:''}${e.supplies?`<div class="sup">🧤 ${esc(e.supplies)}</div>`:''}</div>`:''}
+ <div class="admin-summary">○ ${c.ok}人　△ ${c.maybe}人　× ${c.no}人　✓出席 ${c.actual}人</div>${people}
+ <div class="actionrow"><button class="light" onclick="editEvent('${js(e.id)}')">編集</button><button class="red" onclick="delEvent('${js(e.id)}')">削除</button></div></div>`;
+}
+async function adminAnswer(id,member,val){
+ const key=id+'||'+member,old=DATA.answers[key]?.answer||'';if(old===val)return;
+ if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};DATA.answers[key].answer=val;renderAdminLists();
+ try{await jsonp('adminSetAnswer',{pin:adminPin,eventId:id,member,answer:val});toast('✓ '+member+' を'+val+'に変更しました')}catch(e){DATA.answers[key].answer=old;renderAdminLists();toast(e.message)}
+}
+async function adminActual(id,member,val){
+ const key=id+'||'+member,old=!!DATA.answers[key]?.actual;if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};DATA.answers[key].actual=!!val;renderAdminLists();
+ try{await jsonp('setActual',{pin:adminPin,eventId:id,member,actual:val});toast(val?'✓ 出席にしました':'出席を解除しました')}catch(e){DATA.answers[key].actual=old;renderAdminLists();toast(e.message)}
+}
+async function addEvent(){
+ const d=val('edate'),t=val('etitle'),l=val('eloc'),s=val('esup');if(!d||!t){toast('日付と行事名を入力してください');return}
+ setLoading(true,'行事を追加しています…');try{const r=await jsonp('addEvent',{pin:adminPin,date:d,title:t,location:l,supplies:s});DATA=r.data;renderAdminLists();toast('✓ 行事を追加しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+}
+async function editEvent(id){
+ const e=DATA.events.find(x=>String(x.id)===String(id));if(!e)return;
+ const d=prompt('日付',e.date);if(d===null)return;const t=prompt('行事名',e.title);if(t===null)return;const l=prompt('集合場所',e.location||'');if(l===null)return;const s=prompt('持ち物',e.supplies||'');if(s===null)return;
+ setLoading(true,'更新しています…');try{const r=await jsonp('updateEvent',{pin:adminPin,eventId:id,date:d,title:t,location:l,supplies:s});DATA=r.data;renderAdminLists();toast('✓ 更新しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+}
+async function delEvent(id){
+ const e=DATA.events.find(x=>String(x.id)===String(id));if(!e||!confirm('「'+e.title+'」を削除しますか？\\n出欠データも削除されます。'))return;
+ setLoading(true,'削除しています…');try{const r=await jsonp('deleteEvent',{pin:adminPin,eventId:id});DATA=r.data;renderAdminLists();toast('✓ 削除しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+}
+async function addMember(){
+ const n=val('mname');if(!n){toast('団員名を入力してください');return}
+ setLoading(true,'団員を追加しています…');try{const r=await jsonp('addMember',{pin:adminPin,name:n});DATA=r.data;document.getElementById('mname').value='';renderAdminLists();toast('✓ 団員を追加しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+}
+async function editMember(old){
+ const n=prompt('新しい名前',old);if(n===null||!n.trim()||n.trim()===old)return;
+ setLoading(true,'名前を変更しています…');try{const r=await jsonp('updateMember',{pin:adminPin,oldName:old,newName:n.trim()});DATA=r.data;renderAdminLists();toast('✓ 名前を変更しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+}
+async function delMember(n){
+ if(!confirm('「'+n+'」を削除しますか？\\n出欠データも削除されます。'))return;
+ setLoading(true,'削除しています…');try{const r=await jsonp('deleteMember',{pin:adminPin,name:n});DATA=r.data;renderAdminLists();toast('✓ 削除しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+}
+function val(id){return document.getElementById(id)?.value.trim()||''}
+function fmt(v){const p=String(v).split('-');if(p.length!==3)return v;const d=new Date(+p[0],+p[1]-1,+p[2]);return `${+p[1]}/${+p[2]}（${'日月火水木金土'[d.getDay()]}）`}
+function ansStyle(a){if(a==='○')return'background:#dcfce7;color:#166534';if(a==='△')return'background:#fef3c7;color:#92400e';if(a==='×')return'background:#fee2e2;color:#991b1b';return'background:#f3f4f6;color:#6b7280'}
+function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+function js(v){return String(v??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'\\r')}
+function setLoading(on,text){const x=document.getElementById('loading');if(!x)return;x.style.display=on?'flex':'none';if(text)document.getElementById('loadingText').textContent=text}
+function showMsg(m){const x=document.getElementById('msg');if(x){x.textContent=m;x.style.display='block'}}
+let tt;function toast(m){const x=document.getElementById('toast');if(!x)return;x.textContent=m;x.style.display='block';clearTimeout(tt);tt=setTimeout(()=>x.style.display='none',1800)}
+</script>
+</body>
+</html>
