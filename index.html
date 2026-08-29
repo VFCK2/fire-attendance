@@ -93,31 +93,46 @@ document.addEventListener('DOMContentLoaded',start);
 function start(){
   if(!API_URL.startsWith('https://')) return setupMessage();
   const token=localStorage.getItem(KEY);
-  if(token) loadUser(token).catch(()=>showRegister());
-  else showRegister();
+  jsonp('public').then(()=>{
+    if(token) return loadUser(token).catch(()=>showRegister());
+    showRegister();
+  }).catch(e=>{
+    document.getElementById('app').innerHTML=`<div class="center"><div class="dialog"><h1>🚒 接続エラー</h1><p>GAS APIに接続できません。<br>${esc(e.message)}<br><br>GASのデプロイが「全員」になっているか確認してください。</p></div></div>`;
+  });
 }
 function setupMessage(){
   document.getElementById('app').innerHTML=`<div class="center"><div class="dialog"><h1>🚒 消防団 出欠管理</h1><p>まだ接続先が設定されていません。<br>index.htmlのAPI_URLにGASのウェブアプリURLを設定してください。</p></div></div>`;
 }
 function jsonp(action,params={}){
   return new Promise((resolve,reject)=>{
-    const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const cb='__fire_cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
     const script=document.createElement('script');
-    const q=new URLSearchParams({action,callback:cb,...Object.fromEntries(Object.entries(params).map(([k,v])=>[k,String(v)]))});
+    const pairs=[];
+    pairs.push('action='+encodeURIComponent(action));
+    pairs.push('callback='+encodeURIComponent(cb));
+    Object.keys(params).forEach(k=>pairs.push(encodeURIComponent(k)+'='+encodeURIComponent(String(params[k]))));
+    pairs.push('_='+Date.now());
+
     let done=false;
-    const timer=setTimeout(()=>finish(new Error('通信がタイムアウトしました')),15000);
-    window[cb]=(res)=>finish(null,res);
+    const timer=setTimeout(()=>finish(new Error('通信がタイムアウトしました')),20000);
+
+    window[cb]=function(res){ finish(null,res); };
+
     function finish(err,res){
-      if(done)return; done=true; clearTimeout(timer);
+      if(done)return;
+      done=true;
+      clearTimeout(timer);
       try{delete window[cb]}catch(_){}
-      script.remove();
-      if(err)reject(err);
-      else if(!res||res.ok===false)reject(new Error(res?.error||'エラーが発生しました'));
-      else resolve(res);
+      if(script.parentNode)script.parentNode.removeChild(script);
+      if(err){reject(err);return}
+      if(!res || res.ok===false){reject(new Error((res&&res.error)||'サーバーエラー'));return}
+      resolve(res);
     }
-    script.onerror=()=>finish(new Error('通信に失敗しました'));
-    script.src=API_URL+(API_URL.includes('?')?'&':'?')+q.toString();
-    document.body.appendChild(script);
+
+    script.async=true;
+    script.onerror=function(){finish(new Error('GASへの通信に失敗しました'))};
+    script.src=API_URL+'?'+pairs.join('&');
+    document.head.appendChild(script);
   });
 }
 async function loadUser(token){
