@@ -319,6 +319,30 @@ button { min-height: 40px; }
   color:#2563eb !important;
 }
 
+
+/* v13: 利用者変更も団員名リストから選択 */
+.modal{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  padding:18px;
+  background:rgba(17,24,39,.45);
+}
+.modal-card{
+  width:min(420px,100%);
+  background:#fff;border-radius:16px;padding:18px;
+  box-shadow:0 15px 45px rgba(0,0,0,.2);
+}
+.modal-title{font-size:20px;font-weight:900;margin-bottom:14px}
+.modal-label{font-size:13px;font-weight:800;margin:9px 0 5px}
+.modal-card .input{
+  width:100%;box-sizing:border-box;
+  min-height:44px;height:44px;
+  font-size:14px !important;
+}
+.modal-actions{display:flex;gap:7px;margin-top:14px}
+.modal-actions button{flex:1;min-height:42px;font-size:14px}
+.modal-msg{font-size:12px;color:#b91c1c;margin-top:8px;min-height:16px}
+
 </style>
 </head>
 <body>
@@ -484,14 +508,52 @@ async function setMyAnswer(id,val){
 }
 function counts(id){let ok=0,maybe=0,no=0,actual=0;DATA.members.forEach(n=>{const d=DATA.answers[id+'||'+n];if(!d)return;if(d.answer==='○')ok++;if(d.answer==='△')maybe++;if(d.answer==='×')no++;if(d.actual)actual++});return{ok,maybe,no,actual}}
 function changeMember(){
- const code=prompt('利用者を変更します。登録コードを入力してください'); if(code===null)return;
- const name=prompt('変更後の団員名を入力してください'); if(name===null)return;
- if(!name.trim()||!code.trim())return;
- setLoading(true,'利用者を変更しています…');
- jsonp('changeMember',{token:localStorage.getItem(KEY),name:name.trim(),code:code.trim()})
- .then(r=>{DATA=r.data;currentMember=r.member;renderUser();toast('✓ 利用者を変更しました')})
- .catch(e=>toast(e.message)).finally(()=>setLoading(false));
+ const old=document.getElementById('changeMemberModal'); if(old)old.remove();
+ const modal=document.createElement('div');
+ modal.id='changeMemberModal';
+ modal.className='modal';
+ modal.innerHTML=`<div class="modal-card">
+   <div class="modal-title">利用者を変更</div>
+   <div class="modal-label">変更後の団員名</div>
+   <select id="changeMemberName" class="input"><option value="">団員名を読み込み中...</option></select>
+   <div class="modal-label">登録コード</div>
+   <input id="changeMemberCode" class="input" type="password" inputmode="numeric" placeholder="登録コード">
+   <div class="modal-actions">
+     <button class="light" onclick="document.getElementById('changeMemberModal').remove()">キャンセル</button>
+     <button class="dark" onclick="submitChangeMember()">変更する</button>
+   </div>
+   <div id="changeMemberMsg" class="modal-msg"></div>
+ </div>`;
+ document.body.appendChild(modal);
+
+ const sel=document.getElementById('changeMemberName');
+ jsonp('members').then(r=>{
+   const names=Array.isArray(r.members)?r.members:[];
+   sel.innerHTML='<option value="">団員名を選択してください</option>'+
+     names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+ }).catch(e=>{
+   sel.innerHTML='<option value="">団員名を取得できません</option>';
+   document.getElementById('changeMemberMsg').textContent=e.message;
+ });
 }
+function submitChangeMember(){
+ const sel=document.getElementById('changeMemberName');
+ const code=document.getElementById('changeMemberCode').value.trim();
+ const msg=document.getElementById('changeMemberMsg');
+ const name=sel.value;
+ if(!name){msg.textContent='団員名を選択してください';return}
+ if(!code){msg.textContent='登録コードを入力してください';return}
+ setLoading(true,'利用者を変更しています…');
+ jsonp('changeMember',{token:localStorage.getItem(KEY),name,code})
+ .then(r=>{
+   DATA=r.data; currentMember=r.member;
+   const modal=document.getElementById('changeMemberModal'); if(modal)modal.remove();
+   renderUser(); toast('✓ 利用者を変更しました');
+ })
+ .catch(e=>msg.textContent=e.message)
+ .finally(()=>setLoading(false));
+}
+
 function adminLogin(){
  const pin=prompt('管理者PINを入力してください'); if(pin===null)return;
  setLoading(true,'確認しています…');
