@@ -454,8 +454,8 @@ function fillNames(names){
   s.innerHTML='<option value="">選択してください</option>'+names.map(n=>`<option>${esc(n)}</option>`).join('');
 }
 function renderUser(){
- document.getElementById('app').innerHTML=`<header class="header"><div class="header-in"><div class="logo">🚒 消防団 出欠</div><div class="header-actions"><button class="topbtn" onclick="adminLogin()">管理者</button></div></div></header><main class="main">
- <div class="card"><div class="label">利用者</div><div style="font-size:27px;font-weight:900">${esc(currentMember)} さん</div><button class="linkbtn" onclick="changeMember()">利用者を変更する</button></div>
+ document.getElementById('app').innerHTML=`<header class="header"><div class="header-in"><div class="logo">🚒 消防団 出欠</div><div class="header-actions"><button class="topbtn" onclick="changeMember()">利用者変更</button><button class="topbtn" onclick="adminLogin()">管理者</button></div></div></header><main class="main">
+ <div class="card"><div class="label">利用者</div><div style="font-size:27px;font-weight:900">${esc(currentMember)} さん</div></div>
  <div class="tabs">${tab('current','今月')}${tab('next','来月')}${tab('past','過去')}</div><div id="events"></div></main>`;
  renderEvents();
 }
