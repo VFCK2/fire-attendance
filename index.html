@@ -344,6 +344,9 @@ button { min-height: 40px; }
 .modal-msg{font-size:12px;color:#b91c1c;margin-top:8px;min-height:16px}
 
 </style>
+<style id="fast-startup-css">
+#loading,.loading,.loading-overlay{transition:none!important}
+</style>
 </head>
 <body>
 <div id="app"></div>
@@ -433,24 +436,31 @@ function patchFastAnswer(eventId,member,answer){
 
 async function loadUser(token){
   const cached=readFastCache(token);
+  try{ if(typeof setLoading==='function') setLoading(false); }catch(e){}
+
   if(cached&&cached.data){
     DATA=cached.data;
     currentMember=cached.member||localStorage.getItem('fire_attendance_member')||'';
     renderUser();
-    jsonp('data',{token}).then(r=>{
-      DATA=r.data; currentMember=r.member||currentMember;
+    jsonp('fastData',{token}).then(r=>{
+      DATA=r.data.data;
+      currentMember=r.member||currentMember||localStorage.getItem('fire_attendance_member')||'';
       writeFastCache(token,currentMember,DATA);
       renderUser();
     }).catch(()=>{});
     return;
   }
-  setLoading(true,'読み込み中…');
-  try{
-    const r=await jsonp('data',{token});
-    DATA=r.data; currentMember=r.member||'';
+
+  // 初回もローディング画面で待たせず、先にアプリを描画。
+  try{ renderUser(); }catch(e){}
+  jsonp('fastData',{token}).then(r=>{
+    DATA=r.data.data;
+    currentMember=r.member||'';
     writeFastCache(token,currentMember,DATA);
     renderUser();
-  }finally{setLoading(false)}
+  }).catch(()=>{
+    try{toast('データの読み込みに失敗しました');}catch(_e){}
+  });
 }
 function showRegister(){
   setLoading(false);
