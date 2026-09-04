@@ -404,10 +404,53 @@ function jsonp(action,params={}){
     document.head.appendChild(script);
   });
 }
+
+const FAST_CACHE_KEY='fire_attendance_fast_cache_v1';
+function readFastCache(token){
+  try{
+    const all=JSON.parse(localStorage.getItem(FAST_CACHE_KEY)||'{}');
+    return all[String(token)]||null;
+  }catch(e){return null}
+}
+function writeFastCache(token,member,data){
+  try{
+    const all=JSON.parse(localStorage.getItem(FAST_CACHE_KEY)||'{}');
+    all[String(token)]={member:member,data:data,savedAt:Date.now()};
+    localStorage.setItem(FAST_CACHE_KEY,JSON.stringify(all));
+  }catch(e){}
+}
+function patchFastAnswer(eventId,member,answer){
+  try{
+    const token=localStorage.getItem(KEY), c=readFastCache(token);
+    if(!c||!c.data)return;
+    c.data.answers=c.data.answers||{};
+    const k=String(eventId)+'||'+String(member);
+    const old=c.data.answers[k]||{};
+    c.data.answers[k]={answer:String(answer),actual:!!old.actual};
+    writeFastCache(token,c.member,c.data);
+  }catch(e){}
+}
+
 async function loadUser(token){
-  setLoading(true,'データを読み込み中…');
-  try{const r=await jsonp('data',{token}); DATA=r.data; currentMember=r.member; renderUser();}
-  finally{setLoading(false)}
+  const cached=readFastCache(token);
+  if(cached&&cached.data){
+    DATA=cached.data;
+    currentMember=cached.member||localStorage.getItem('fire_attendance_member')||'';
+    renderUser();
+    jsonp('data',{token}).then(r=>{
+      DATA=r.data; currentMember=r.member||currentMember;
+      writeFastCache(token,currentMember,DATA);
+      renderUser();
+    }).catch(()=>{});
+    return;
+  }
+  setLoading(true,'読み込み中…');
+  try{
+    const r=await jsonp('data',{token});
+    DATA=r.data; currentMember=r.member||'';
+    writeFastCache(token,currentMember,DATA);
+    renderUser();
+  }finally{setLoading(false)}
 }
 function showRegister(){
   setLoading(false);
