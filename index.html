@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#111827">
-<title>消防団 出欠管理</title>
+<title>消防団 出欠管理25</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;width:100%;min-width:0;background:#f2f4f7;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Yu Gothic","Noto Sans JP",sans-serif;-webkit-font-smoothing:antialiased}
@@ -352,6 +352,7 @@ button { min-height: 40px; }
 <div id="app"></div>
 <div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
 <div class="toast" id="toast"></div>
+<script>let v25SaveSeq=0;</script>
 <script>
 /* ===== 設定 =====
    GitHub Pagesへ公開したら、ここだけ自分のGAS WebアプリURLに変更。
@@ -549,13 +550,15 @@ function eventCard(e){
  <div class="answer-title">👥 団員の回答</div><div class="member-list">${rows}</div></section>`;
 }
 async function setMyAnswer(id,val){
+  const __v25id=++v25SaveSeq;
  const key=id+'||'+currentMember;
  const old=DATA.answers[key]?.answer||'';
  if(old===val)return;
  if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};
  DATA.answers[key].answer=val; renderEvents(); ;
  try{
-   await jsonp('setAnswer',{token:localStorage.getItem(KEY),eventId:id,member:currentMember,answer:val});
+   await jsonp('setAnswer',{token:localStorage.getItem(KEY),eventId:id,member:currentMember,answer:val})
+  if(__v25id===v25SaveSeq){toast((String(val)==='○'?'○':String(val)==='△'?'△':String(val)==='×'?'×':String(val))+'を保存しました');};
    toast((String(val)==='○'?'○':String(val)==='△'?'△':String(val)==='×'?'×':String(val))+'を保存しました');
  }catch(e){DATA.answers[key].answer=old;renderEvents();toast(e.message)}
 }
