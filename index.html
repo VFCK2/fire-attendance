@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#111827">
-<title>消防団 出欠管理25</title>
+<title>消防団 出欠管理26</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;width:100%;min-width:0;background:#f2f4f7;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Yu Gothic","Noto Sans JP",sans-serif;-webkit-font-smoothing:antialiased}
@@ -352,7 +352,7 @@ button { min-height: 40px; }
 <div id="app"></div>
 <div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
 <div class="toast" id="toast"></div>
-<script>let v25SaveSeq=0;</script>
+<script>let v26SaveSeq=0;</script>
 <script>
 /* ===== 設定 =====
    GitHub Pagesへ公開したら、ここだけ自分のGAS WebアプリURLに変更。
@@ -550,17 +550,36 @@ function eventCard(e){
  <div class="answer-title">👥 団員の回答</div><div class="member-list">${rows}</div></section>`;
 }
 async function setMyAnswer(id,val){
-  const __v25id=++v25SaveSeq;
- const key=id+'||'+currentMember;
- const old=DATA.answers[key]?.answer||'';
- if(old===val)return;
- if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};
- DATA.answers[key].answer=val; renderEvents(); ;
- try{
-   await jsonp('setAnswer',{token:localStorage.getItem(KEY),eventId:id,member:currentMember,answer:val})
-  if(__v25id===v25SaveSeq){toast((String(val)==='○'?'○':String(val)==='△'?'△':String(val)==='×'?'×':String(val))+'を保存しました');};
-   toast((String(val)==='○'?'○':String(val)==='△'?'△':String(val)==='×'?'×':String(val))+'を保存しました');
- }catch(e){DATA.answers[key].answer=old;renderEvents();toast(e.message)}
+  const requestId=++v26SaveSeq;
+  const key=String(id)+'||'+String(currentMember);
+  const old=DATA.answers[key]||{};
+  const oldAnswer=old.answer||'';
+  const selected=String(val);
+
+  // 即時反映
+  DATA.answers=DATA.answers||{};
+  DATA.answers[key]={answer:selected,actual:!!old.actual};
+  renderEvents();
+
+  try{
+    await jsonp('setAnswer',{
+      token:localStorage.getItem(KEY),
+      eventId:String(id),
+      member:currentMember,
+      answer:selected
+    });
+
+    // 最新操作の保存完了だけ通知
+    if(requestId===v26SaveSeq){
+      const label=selected==='○'?'○':selected==='△'?'△':selected==='×'?'×':selected;
+      toast(label+'を保存しました');
+    }
+  }catch(e){
+    // 保存失敗時は元に戻す
+    DATA.answers[key].answer=oldAnswer;
+    renderEvents();
+    if(requestId===v26SaveSeq) toast('保存に失敗しました');
+  }
 }
 function counts(id){let ok=0,maybe=0,no=0,actual=0;DATA.members.forEach(n=>{const d=DATA.answers[id+'||'+n];if(!d)return;if(d.answer==='○')ok++;if(d.answer==='△')maybe++;if(d.answer==='×')no++;if(d.actual)actual++});return{ok,maybe,no,actual}}
 function changeMember(){
