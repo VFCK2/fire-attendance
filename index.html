@@ -353,25 +353,6 @@ button { min-height: 40px; }
 <div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
 <div class="toast" id="toast"></div>
 <script>
-let v21ActionSeq=0;
-function v21LabelFor(action,args){
-  const a=String(action);
-  if(a==='adminSetAnswer'){
-    const v=String((args&&args.answer)||'');
-    return (v==='○'||v==='△'||v==='×') ? v+'を保存しました' : '回答を保存しました';
-  }
-  if(a==='setActual') return '実参加を保存しました';
-  if(a==='changeMember') return '利用者を変更しました';
-  if(a==='addEvent') return '行事を追加しました';
-  if(a==='updateEvent') return '行事を更新しました';
-  if(a==='deleteEvent') return '行事を削除しました';
-  if(a==='addMember') return '団員を追加しました';
-  if(a==='updateMember') return '団員を更新しました';
-  if(a==='deleteMember') return '団員を削除しました';
-  return '保存しました';
-}
-</script>
-<script>
 /* ===== 設定 =====
    GitHub Pagesへ公開したら、ここだけ自分のGAS WebアプリURLに変更。
 */
@@ -567,7 +548,7 @@ function eventCard(e){
  <div class="summary"><div class="sum">○ 参加<b>${c.ok}</b></div><div class="sum">△ 未定<b>${c.maybe}</b></div><div class="sum">× 欠席<b>${c.no}</b></div><div class="sum">✓ 出席<b>${c.actual}</b></div></div>
  <div class="answer-title">👥 団員の回答</div><div class="member-list">${rows}</div></section>`;
 }
-async function __v19_setMyAnswer(id,val){
+async function setMyAnswer(id,val){
  const key=id+'||'+currentMember;
  const old=DATA.answers[key]?.answer||'';
  if(old===val)return;
@@ -578,19 +559,6 @@ async function __v19_setMyAnswer(id,val){
    toast((String(val)==='○'?'○':String(val)==='△'?'△':String(val)==='×'?'×':String(val))+'を保存しました');
  }catch(e){DATA.answers[key].answer=old;renderEvents();toast(e.message)}
 }
-async function setMyAnswer(id,val){
-  // 画面は先に更新済みのため、保存状態だけトーストで追随させる。
-  try{ ; }catch(e){}
-  try{
-    const result=await __v19_setMyAnswer(id, val);
-    try{ /* v19 success toast handled by wrapper */; }catch(e){}
-    return result;
-  }catch(e){
-    try{ toast('保存に失敗しました'); }catch(_e){}
-    throw e;
-  }
-}
-
 function counts(id){let ok=0,maybe=0,no=0,actual=0;DATA.members.forEach(n=>{const d=DATA.answers[id+'||'+n];if(!d)return;if(d.answer==='○')ok++;if(d.answer==='△')maybe++;if(d.answer==='×')no++;if(d.actual)actual++});return{ok,maybe,no,actual}}
 function changeMember(){
  const old=document.getElementById('changeMemberModal'); if(old)old.remove();
@@ -676,52 +644,36 @@ function adminEvent(e){
 async function adminAnswer(id,member,val){
  const key=id+'||'+member,old=DATA.answers[key]?.answer||'';if(old===val)return;
  if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};DATA.answers[key].answer=val;renderAdminLists();
- try{const __v21id=++v21ActionSeq;
-await jsonp('adminSetAnswer',{pin:adminPin,eventId:id,member,answer:val})
-    if(__v21id===v21ActionSeq){ try{ toast(v21LabelFor('adminSetAnswer',{answer:val})); }catch(e){} };toast('✓ '+member+' を'+val+'に変更しました')}catch(e){DATA.answers[key].answer=old;renderAdminLists();toast(e.message)}
+ try{await jsonp('adminSetAnswer',{pin:adminPin,eventId:id,member,answer:val});toast('✓ '+member+' を'+val+'に変更しました')}catch(e){DATA.answers[key].answer=old;renderAdminLists();toast(e.message)}
 }
 async function adminActual(id,member,val){
  const key=id+'||'+member,old=!!DATA.answers[key]?.actual;if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};DATA.answers[key].actual=!!val;renderAdminLists();
- try{const __v21id=++v21ActionSeq;
-await jsonp('setActual',{pin:adminPin,eventId:id,member,actual:val})
-    if(__v21id===v21ActionSeq){ try{ toast(v21LabelFor('setActual',{answer:''})); }catch(e){} };toast(val?'✓ 出席にしました':'出席を解除しました')}catch(e){DATA.answers[key].actual=old;renderAdminLists();toast(e.message)}
+ try{await jsonp('setActual',{pin:adminPin,eventId:id,member,actual:val});toast(val?'✓ 出席にしました':'出席を解除しました')}catch(e){DATA.answers[key].actual=old;renderAdminLists();toast(e.message)}
 }
 async function addEvent(){
  const d=val('edate'),t=val('etitle'),l=val('eloc'),s=val('esup');if(!d||!t){toast('日付と行事名を入力してください');return}
- setLoading(true,'行事を追加しています…');try{const r=const __v21id=++v21ActionSeq;
-await jsonp('addEvent',{pin:adminPin,date:d,title:t,location:l,supplies:s})
-    if(__v21id===v21ActionSeq){ try{ toast(v21LabelFor('addEvent',{answer:''})); }catch(e){} };DATA=r.data;renderAdminLists();toast('✓ 行事を追加しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+ setLoading(true,'行事を追加しています…');try{const r=await jsonp('addEvent',{pin:adminPin,date:d,title:t,location:l,supplies:s});DATA=r.data;renderAdminLists();toast('✓ 行事を追加しました')}catch(e){toast(e.message)}finally{setLoading(false)}
 }
 async function editEvent(id){
  const e=DATA.events.find(x=>String(x.id)===String(id));if(!e)return;
  const d=prompt('日付',e.date);if(d===null)return;const t=prompt('行事名',e.title);if(t===null)return;const l=prompt('集合場所',e.location||'');if(l===null)return;const s=prompt('持ち物',e.supplies||'');if(s===null)return;
- setLoading(true,'更新しています…');try{const r=const __v21id=++v21ActionSeq;
-await jsonp('updateEvent',{pin:adminPin,eventId:id,date:d,title:t,location:l,supplies:s})
-    if(__v21id===v21ActionSeq){ try{ toast(v21LabelFor('updateEvent',{answer:''})); }catch(e){} };DATA=r.data;renderAdminLists();toast('✓ 更新しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+ setLoading(true,'更新しています…');try{const r=await jsonp('updateEvent',{pin:adminPin,eventId:id,date:d,title:t,location:l,supplies:s});DATA=r.data;renderAdminLists();toast('✓ 更新しました')}catch(e){toast(e.message)}finally{setLoading(false)}
 }
 async function delEvent(id){
  const e=DATA.events.find(x=>String(x.id)===String(id));if(!e||!confirm('「'+e.title+'」を削除しますか？\\n出欠データも削除されます。'))return;
- setLoading(true,'削除しています…');try{const r=const __v21id=++v21ActionSeq;
-await jsonp('deleteEvent',{pin:adminPin,eventId:id})
-    if(__v21id===v21ActionSeq){ try{ toast(v21LabelFor('deleteEvent',{answer:''})); }catch(e){} };DATA=r.data;renderAdminLists();toast('✓ 削除しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+ setLoading(true,'削除しています…');try{const r=await jsonp('deleteEvent',{pin:adminPin,eventId:id});DATA=r.data;renderAdminLists();toast('✓ 削除しました')}catch(e){toast(e.message)}finally{setLoading(false)}
 }
 async function addMember(){
  const n=val('mname');if(!n){toast('団員名を入力してください');return}
- setLoading(true,'団員を追加しています…');try{const r=const __v21id=++v21ActionSeq;
-await jsonp('addMember',{pin:adminPin,name:n})
-    if(__v21id===v21ActionSeq){ try{ toast(v21LabelFor('addMember',{answer:''})); }catch(e){} };DATA=r.data;document.getElementById('mname').value='';renderAdminLists();toast('✓ 団員を追加しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+ setLoading(true,'団員を追加しています…');try{const r=await jsonp('addMember',{pin:adminPin,name:n});DATA=r.data;document.getElementById('mname').value='';renderAdminLists();toast('✓ 団員を追加しました')}catch(e){toast(e.message)}finally{setLoading(false)}
 }
 async function editMember(old){
  const n=prompt('新しい名前',old);if(n===null||!n.trim()||n.trim()===old)return;
- setLoading(true,'名前を変更しています…');try{const r=const __v21id=++v21ActionSeq;
-await jsonp('updateMember',{pin:adminPin,oldName:old,newName:n.trim()})
-    if(__v21id===v21ActionSeq){ try{ toast(v21LabelFor('updateMember',{answer:''})); }catch(e){} };DATA=r.data;renderAdminLists();toast('✓ 名前を変更しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+ setLoading(true,'名前を変更しています…');try{const r=await jsonp('updateMember',{pin:adminPin,oldName:old,newName:n.trim()});DATA=r.data;renderAdminLists();toast('✓ 名前を変更しました')}catch(e){toast(e.message)}finally{setLoading(false)}
 }
 async function delMember(n){
  if(!confirm('「'+n+'」を削除しますか？\\n出欠データも削除されます。'))return;
- setLoading(true,'削除しています…');try{const r=const __v21id=++v21ActionSeq;
-await jsonp('deleteMember',{pin:adminPin,name:n})
-    if(__v21id===v21ActionSeq){ try{ toast(v21LabelFor('deleteMember',{answer:''})); }catch(e){} };DATA=r.data;renderAdminLists();toast('✓ 削除しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+ setLoading(true,'削除しています…');try{const r=await jsonp('deleteMember',{pin:adminPin,name:n});DATA=r.data;renderAdminLists();toast('✓ 削除しました')}catch(e){toast(e.message)}finally{setLoading(false)}
 }
 function val(id){return document.getElementById(id)?.value.trim()||''}
 function fmt(v){const p=String(v).split('-');if(p.length!==3)return v;const d=new Date(+p[0],+p[1]-1,+p[2]);return `${+p[1]}/${+p[2]}（${'日月火水木金土'[d.getDay()]}）`}
