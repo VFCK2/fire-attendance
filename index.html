@@ -567,43 +567,27 @@ function eventCard(e){
  <div class="summary"><div class="sum">○ 参加<b>${c.ok}</b></div><div class="sum">△ 未定<b>${c.maybe}</b></div><div class="sum">× 欠席<b>${c.no}</b></div><div class="sum">✓ 出席<b>${c.actual}</b></div></div>
  <div class="answer-title">👥 団員の回答</div><div class="member-list">${rows}</div></section>`;
 }
-async function __v22_baseSetMyAnswer(id,val){
-  const key=String(id)+'||'+String(currentMember);
-  const old=DATA.answers&&DATA.answers[key]?DATA.answers[key]:{};
-  const oldAnswer=old.answer||'';
-
-  DATA.answers=DATA.answers||{};
-  DATA.answers[key]={answer:String(val),actual:!!old.actual};
-  patchFastAnswer(id,currentMember,String(val));
-  renderUser();
-
-  try{
-    await jsonp('setAnswer',{
-      token:localStorage.getItem(KEY),
-      eventId:String(id),
-      member:currentMember,
-      answer:String(val)
-    });
-  }catch(e){
-    DATA.answers[key]={answer:oldAnswer,actual:!!old.actual};
-    patchFastAnswer(id,currentMember,oldAnswer);
-    renderUser();
-    throw e;
-  }
+async function __v19_setMyAnswer(id,val){
+ const key=id+'||'+currentMember;
+ const old=DATA.answers[key]?.answer||'';
+ if(old===val)return;
+ if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};
+ DATA.answers[key].answer=val; renderEvents(); ;
+ try{
+   await jsonp('setAnswer',{token:localStorage.getItem(KEY),eventId:id,member:currentMember,answer:val});
+   toast((String(val)==='○'?'○':String(val)==='△'?'△':String(val)==='×'?'×':String(val))+'を保存しました');
+ }catch(e){DATA.answers[key].answer=old;renderEvents();toast(e.message)}
 }
 async function setMyAnswer(id,val){
-  const requestId=++v20AnswerRequest;
-  const selected=String(val);
+  // 画面は先に更新済みのため、保存状態だけトーストで追随させる。
+  try{ ; }catch(e){}
   try{
-    await __v22_baseSetMyAnswer(id, val);
-    if(requestId===v20AnswerRequest){
-      const label=selected==='○'?'○':selected==='△'?'△':selected==='×'?'×':selected;
-      try{toast(label+'を保存しました');}catch(e){}
-    }
+    const result=await __v19_setMyAnswer(id, val);
+    try{ /* v19 success toast handled by wrapper */; }catch(e){}
+    return result;
   }catch(e){
-    if(requestId===v20AnswerRequest){
-      try{toast('保存に失敗しました');}catch(_e){}
-    }
+    try{ toast('保存に失敗しました'); }catch(_e){}
+    throw e;
   }
 }
 
