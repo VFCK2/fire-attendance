@@ -352,7 +352,7 @@ button { min-height: 40px; }
 <div id="app"></div>
 <div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
 <div class="toast" id="toast"></div>
-<script>let v26SaveSeq=0; const APP_VERSION='v28';</script>
+<script>let v26SaveSeq=0; const APP_VERSION='v29';</script>
 <script>
 /* ===== 設定 =====
    GitHub Pagesへ公開したら、ここだけ自分のGAS WebアプリURLに変更。
@@ -366,12 +366,12 @@ document.addEventListener('DOMContentLoaded',start);
 function start(){
   if(!API_URL.startsWith('https://')) return setupMessage();
   const token=localStorage.getItem(KEY);
-  jsonp('public').then(()=>{
-    if(token) return loadUser(token).catch(()=>showRegister());
+  // 起動時の「public」疎通確認を省略。登録済み端末は最短経路でデータ取得する。
+  if(token){
+    loadUser(token).catch(()=>showRegister());
+  }else{
     showRegister();
-  }).catch(e=>{
-    document.getElementById('app').innerHTML=`<div class="center"><div class="dialog"><h1>🚒 接続エラー</h1><p>GAS APIに接続できません。<br>${esc(e.message)}<br><br>GASのデプロイが「全員」になっているか確認してください。</p></div></div>`;
-  });
+  }
 }
 function setupMessage(){
   document.getElementById('app').innerHTML=`<div class="center"><div class="dialog"><h1>🚒 消防団 出欠管理</h1><p>まだ接続先が設定されていません。<br>index.htmlのAPI_URLにGASのウェブアプリURLを設定してください。</p></div></div>`;
@@ -437,7 +437,7 @@ function patchFastAnswer(eventId,member,answer){
 
 async function loadUser(token){
   const cached=readFastCache(token);
-  try{ if(typeof setLoading==='function') setLoading(false); }catch(e){}
+  try{ setLoading(false); }catch(e){}
 
   if(cached&&cached.data){
     DATA=cached.data;
