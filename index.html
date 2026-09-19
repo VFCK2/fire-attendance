@@ -352,7 +352,7 @@ button { min-height: 40px; }
 <div id="app"></div>
 <div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
 <div class="toast" id="toast"></div>
-<script>let v26SaveSeq=0; const APP_VERSION='v30';</script>
+<script>let v26SaveSeq=0; const APP_VERSION='v31';</script>
 <script>
 /* ===== 設定 =====
    GitHub Pagesへ公開したら、ここだけ自分のGAS WebアプリURLに変更。
@@ -409,7 +409,7 @@ function jsonp(action,params={}){
   });
 }
 
-const FAST_CACHE_KEY='fire_attendance_fast_cache_v2';
+const FAST_CACHE_KEY='fire_attendance_fast_cache_v31';
 function readFastCache(token){
   try{
     const all=JSON.parse(localStorage.getItem(FAST_CACHE_KEY)||'{}');
@@ -669,9 +669,23 @@ async function adminAnswer(id,member,val){
  try{await jsonp('adminSetAnswer',{pin:adminPin,eventId:id,member,answer:val});toast('✓ '+member+' を'+val+'に変更しました')}catch(e){DATA.answers[key].answer=old;renderAdminLists();toast(e.message)}
 }
 async function adminActual(id,member,val){
- const key=id+'||'+member,old=!!DATA.answers[key]?.actual;if(!DATA.answers[key])DATA.answers[key]={answer:'',actual:false};DATA.answers[key].actual=!!val;renderAdminLists();
- try{await jsonp('setActual',{pin:adminPin,eventId:id,member,actual:val});toast(val?'✓ 出席にしました':'出席を解除しました')}catch(e){DATA.answers[key].actual=old;renderAdminLists();toast(e.message)}
+ const key=id+'||'+member;
+ const old=!!DATA.answers[key]?.actual;
+ try{
+   setLoading(true,'保存しています…');
+   const r=await jsonp('setActual',{pin:adminPin,eventId:id,member,actual:Boolean(val)});
+   if(!DATA.answers[key]) DATA.answers[key]={answer:'',actual:false};
+   DATA.answers[key].actual = r && r.actual !== undefined ? Boolean(r.actual) : Boolean(val);
+   renderAdminLists();
+   toast(Boolean(val)?'✓ 出席にしました':'出席を解除しました');
+ }catch(e){
+   if(!DATA.answers[key]) DATA.answers[key]={answer:'',actual:false};
+   DATA.answers[key].actual=old;
+   renderAdminLists();
+   toast(e.message);
+ }finally{setLoading(false)}
 }
+
 async function addEvent(){
  const d=val('edate'),t=val('etitle'),l=val('eloc'),s=val('esup');if(!d||!t){toast('日付と行事名を入力してください');return}
  setLoading(true,'行事を追加しています…');try{const r=await jsonp('addEvent',{pin:adminPin,date:d,title:t,location:l,supplies:s});DATA=r.data;renderAdminLists();toast('✓ 行事を追加しました')}catch(e){toast(e.message)}finally{setLoading(false)}
