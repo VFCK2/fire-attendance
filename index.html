@@ -352,7 +352,7 @@ button { min-height: 40px; }
 <div id="app"></div>
 <div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
 <div class="toast" id="toast"></div>
-<script>let v26SaveSeq=0; const APP_VERSION='v31';</script>
+<script>let v26SaveSeq=0; const APP_VERSION='v32';</script>
 <script>
 /* ===== 設定 =====
    GitHub Pagesへ公開したら、ここだけ自分のGAS WebアプリURLに変更。
@@ -688,7 +688,17 @@ async function adminActual(id,member,val){
 
 async function addEvent(){
  const d=val('edate'),t=val('etitle'),l=val('eloc'),s=val('esup');if(!d||!t){toast('日付と行事名を入力してください');return}
- setLoading(true,'行事を追加しています…');try{const r=await jsonp('addEvent',{pin:adminPin,date:d,title:t,location:l,supplies:s});DATA=r.data;renderAdminLists();toast('✓ 行事を追加しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+ setLoading(true,'行事を追加しています…');try{
+  const r=await jsonp('addEvent',{pin:adminPin,date:d,title:t,location:l,supplies:s});
+  DATA=r.data;
+  document.getElementById('edate').value='';
+  document.getElementById('etitle').value='';
+  document.getElementById('eloc').value='';
+  document.getElementById('esup').value='';
+  renderAdminLists();
+  toast('✓ 行事を追加しました');
+  setTimeout(()=>document.getElementById('edate')?.focus(),50);
+}catch(e){toast(e.message)}finally{setLoading(false)}
 }
 async function editEvent(id){
  const e=DATA.events.find(x=>String(x.id)===String(id));if(!e)return;
