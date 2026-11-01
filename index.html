@@ -36,6 +36,8 @@ textarea.input{height:78px;padding-top:11px}
 .cancel-banner{margin:12px 0;padding:16px 12px;border:3px solid #f87171;border-radius:14px;background:#fff1f2;color:#b91c1c;text-align:center;font-size:21px;font-weight:900}
 .cancel-banner small{display:block;margin-top:5px;color:#7f1d1d;font-size:14px}
 .cancel-tag{display:inline-block;padding:6px 10px;border-radius:9px;background:#e5e7eb;color:#4b5563;font-size:14px;font-weight:900}
+.admin-event .cancel-action{width:100%;height:auto!important;min-height:46px!important;padding:10px 12px!important;background:#b91c1c!important;color:#fff!important;font-weight:900!important;font-size:15px!important;border-radius:10px!important}
+.admin-event .cancel-action.restore{background:#374151!important}
 .answer-title{font-size:21px;font-weight:900;margin:11px 0 8px}
 .answers{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .ab{height:105px;border:0;border-radius:15px;font-size:52px;font-weight:900}
@@ -354,6 +356,18 @@ button { min-height: 40px; }
 .edit-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 .edit-actions button{min-height:48px;border:0;border-radius:11px;font-weight:900}
 
+
+/* v38: 過去の行事を年月ごとに折りたたんで表示 */
+.month-groups{display:flex;flex-direction:column;gap:12px}
+.month-group{background:#fff;border:1px solid #e3e7ed;border-radius:18px;overflow:hidden;box-shadow:0 3px 12px rgba(20,30,50,.04)}
+.month-group>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;font-size:20px;font-weight:900;color:#172033}
+.month-group>summary::-webkit-details-marker{display:none}
+.month-group>summary:after{content:'＋';font-size:20px;color:#596579}
+.month-group[open]>summary:after{content:'−'}
+.month-count{font-size:13px;font-weight:800;color:#5b6473;background:#f1f4f8;border-radius:999px;padding:5px 10px;white-space:nowrap}
+.month-group-body{padding:0 10px 10px;display:flex;flex-direction:column;gap:12px}
+.month-group-body>.event,.month-group-body>.admin-event{margin:0}
+
 </style>
 <style id="fast-startup-css">
 #loading,.loading,.loading-overlay{transition:none!important}
@@ -363,7 +377,7 @@ button { min-height: 40px; }
 <div id="app"></div>
 <div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
 <div class="toast" id="toast"></div>
-<script>let v26SaveSeq=0; const APP_VERSION='v36';</script>
+<script>let v26SaveSeq=0; const APP_VERSION='v38';</script>
 <script>
 /* v33: 起動時に古いローディング表示が残った場合の復旧 */
 document.addEventListener('DOMContentLoaded', function(){
@@ -571,9 +585,25 @@ function filtered(){
    return d<new Date(y,m,1);
  });
 }
+function groupPastByMonth(events, renderer){
+ const sorted=[...events].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ const groups=new Map();
+ sorted.forEach(e=>{
+   const d=new Date(e.date+'T00:00:00');
+   const key=Number.isNaN(d.getTime())?String(e.date||'日付不明').slice(0,7):`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+   if(!groups.has(key))groups.set(key,[]);
+   groups.get(key).push(e);
+ });
+ if(!groups.size)return '<div class="empty">この期間の行事はありません</div>';
+ return '<div class="month-groups">'+[...groups.entries()].map(([key,items],i)=>{
+   const [yy,mm]=key.split('-');
+   const label=/^\d{4}-\d{2}$/.test(key)?`${yy}年${Number(mm)}月`:`${key}`;
+   return `<details class="month-group" ${i===0?'open':''}><summary><span>${label}</span><span class="month-count">${items.length}件</span></summary><div class="month-group-body">${items.map(renderer).join('')}</div></details>`;
+ }).join('')+'</div>';
+}
 function renderEvents(){
  const a=filtered(); const box=document.getElementById('events'); if(!box)return;
- box.innerHTML=a.length?a.map(eventCard).join(''):`<div class="empty">この期間の行事はありません</div>`;
+ box.innerHTML=period==='past'?groupPastByMonth(a,eventCard):(a.length?a.map(eventCard).join(''):`<div class="empty">この期間の行事はありません</div>`);
 }
 function eventCard(e){
  const canceled=!!e.canceled;
@@ -683,7 +713,7 @@ function renderAdmin(){
 }
 function renderAdminLists(){
  const ev=document.getElementById('adminEvents'), ms=document.getElementById('adminMembers'); if(!ev)return;
- const a=filtered(); ev.innerHTML=a.length?a.map(adminEvent).join(''):`<div class="empty">行事はありません</div>`;
+ const a=filtered(); ev.innerHTML=period==='past'?groupPastByMonth(a,adminEvent):(a.length?a.map(adminEvent).join(''):`<div class="empty">行事はありません</div>`);
  ms.innerHTML=DATA.members.map(n=>`<div class="admin-event"><div class="admin-title">${esc(n)}</div><div class="actionrow"><button class="light" onclick="editMember('${js(n)}')">名前変更</button><button class="red" onclick="delMember('${js(n)}')">削除</button></div></div>`).join('')||'<div class="empty">団員はありません</div>';
 }
 function adminEvent(e){
@@ -699,8 +729,8 @@ function adminEvent(e){
  return `<div class="admin-event"><div class="admin-title">${esc(e.title)}</div><div class="admin-sub">${fmt(e.date)}</div>
  ${e.location||e.supplies?`<div class="info" style="margin-top:8px">${e.location?`<div class="loc">📍 ${esc(e.location)}</div>`:''}${e.supplies?`<div class="sup">🧤 ${esc(e.supplies)}</div>`:''}</div>`:''}
  ${e.canceled?'<div class="cancel-banner">⊘ 中止中</div>':`<div class="admin-summary">○ ${c.ok}人　△ ${c.maybe}人　× ${c.no}人　✓出席 ${c.actual}人</div>${people}`}
- <div class="actionrow"><button class="light" onclick="editEvent('${js(e.id)}')">編集</button><button class="${e.canceled?'dark':'red'}" onclick="toggleEventCancel('${js(e.id)}',${!e.canceled})">${e.canceled?'中止を解除':'中止にする'}</button></div>
- <div class="actionrow"><button class="red" onclick="delEvent('${js(e.id)}')">削除</button></div></div>`;
+ <div class="actionrow"><button class="cancel-action ${e.canceled?'restore':''}" onclick="toggleEventCancel('${js(e.id)}',${!e.canceled})">${e.canceled?'↩ 中止を解除':'⛔ この行事を中止にする'}</button></div>
+ <div class="actionrow"><button class="light" onclick="editEvent('${js(e.id)}')">編集</button><button class="red" onclick="delEvent('${js(e.id)}')">削除</button></div></div>`;
 }
 async function adminAnswer(id,member,val){
  const key=id+'||'+member,old=DATA.answers[key]?.answer||'';if(old===val)return;
