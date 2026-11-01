@@ -33,6 +33,9 @@ textarea.input{height:78px;padding-top:11px}
 .info div{padding:11px 13px;border-radius:13px;font-size:20px;font-weight:900;line-height:1.35;word-break:break-word}
 .loc{background:#e0f2fe;border:3px solid #7dd3fc;color:#075985}
 .sup{background:#fff7ed;border:3px solid #fdba74;color:#9a3412}
+.cancel-banner{margin:12px 0;padding:16px 12px;border:3px solid #f87171;border-radius:14px;background:#fff1f2;color:#b91c1c;text-align:center;font-size:21px;font-weight:900}
+.cancel-banner small{display:block;margin-top:5px;color:#7f1d1d;font-size:14px}
+.cancel-tag{display:inline-block;padding:6px 10px;border-radius:9px;background:#e5e7eb;color:#4b5563;font-size:14px;font-weight:900}
 .answer-title{font-size:21px;font-weight:900;margin:11px 0 8px}
 .answers{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .ab{height:105px;border:0;border-radius:15px;font-size:52px;font-weight:900}
@@ -343,6 +346,14 @@ button { min-height: 40px; }
 .modal-actions button{flex:1;min-height:42px;font-size:14px}
 .modal-msg{font-size:12px;color:#b91c1c;margin-top:8px;min-height:16px}
 
+
+.edit-overlay{position:fixed;inset:0;z-index:95;background:rgba(17,24,39,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.edit-panel{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:18px 15px calc(16px + env(safe-area-inset-bottom));box-shadow:0 8px 30px rgba(0,0,0,.22)}
+.edit-heading{font-size:21px;font-weight:900;margin:0 0 14px}
+.edit-label{display:block;font-size:14px;font-weight:900;margin:9px 0 5px}
+.edit-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.edit-actions button{min-height:48px;border:0;border-radius:11px;font-weight:900}
+
 </style>
 <style id="fast-startup-css">
 #loading,.loading,.loading-overlay{transition:none!important}
@@ -352,7 +363,31 @@ button { min-height: 40px; }
 <div id="app"></div>
 <div class="loading" id="loading"><span id="loadingText">読み込み中…</span></div>
 <div class="toast" id="toast"></div>
-<script>let v26SaveSeq=0; const APP_VERSION='v32';</script>
+<script>let v26SaveSeq=0; const APP_VERSION='v36';</script>
+<script>
+/* v33: 起動時に古いローディング表示が残った場合の復旧 */
+document.addEventListener('DOMContentLoaded', function(){
+  const loading = document.getElementById('loading');
+  if (loading) loading.style.display = 'none';
+  window.setTimeout(function(){
+    const app = document.getElementById('app');
+    const overlay = document.getElementById('loading');
+    if (overlay) overlay.style.display = 'none';
+    if (app && !app.children.length) {
+      app.innerHTML = '<div class="center"><div class="dialog"><h1>🚒 消防団 出欠管理</h1><p>画面の起動処理が完了しませんでした。Safariでページを再読み込みしてください。改善しない場合は、GASとの接続または公開中のindex.htmlを確認します。</p></div></div>';
+    }
+  }, 12000);
+});
+window.addEventListener('error', function(e){
+  if (e && e.target && e.target !== window) return;
+  const loading = document.getElementById('loading');
+  if (loading) loading.style.display = 'none';
+  const app = document.getElementById('app');
+  if (app && !app.children.length) {
+    app.innerHTML = '<div class="center"><div class="dialog"><h1>🚒 消防団 出欠管理</h1><p>画面の起動中にエラーが発生しました。ページを再読み込みしてください。続く場合は公開中のindex.htmlを確認します。</p></div></div>';
+  }
+});
+</script>
 <script>
 /* ===== 設定 =====
    GitHub Pagesへ公開したら、ここだけ自分のGAS WebアプリURLに変更。
@@ -364,6 +399,7 @@ let DATA={members:[],events:[],answers:{}}, currentMember='', adminPin='', perio
 document.addEventListener('DOMContentLoaded',start);
 
 function start(){
+  setLoading(false);
   if(!API_URL.startsWith('https://')) return setupMessage();
   const token=localStorage.getItem(KEY);
   // 起動時の「public」疎通確認を省略。登録済み端末は最短経路でデータ取得する。
@@ -510,7 +546,7 @@ function fillNames(names){
 function renderUser(){
  document.getElementById('app').innerHTML=`<header class="header"><div class="header-in"><div class="logo">🚒 消防団 出欠</div><div class="header-actions"><button class="topbtn" onclick="changeMember()">利用者変更</button><button class="topbtn" onclick="adminLogin()">管理者</button></div></div></header><main class="main">
  <div class="card"><div class="label">利用者</div><div style="font-size:27px;font-weight:900">${esc(currentMember)} さん</div></div>
- <div class="tabs">${tab('current','今月')}${tab('next','来月')}${tab('past','過去')}</div><div id="events"></div></main>`;
+ <div class="tabs">${tab('current','今月')}${tab('next','来月以降')}${tab('past','過去')}</div><div id="events"></div></main>`;
  renderEvents();
 }
 function tab(p,t){return `<button class="tab ${period===p?'on':''}" onclick="switchPeriod('${p}')">${t}</button>`}
@@ -519,7 +555,7 @@ function switchPeriod(p){
   // タブ自体は再描画されないため、選択状態をその場で更新する
   document.querySelectorAll('.tabs .tab').forEach(b=>{
     const text=b.textContent.trim();
-    const active=(p==='current'&&text==='今月')||(p==='next'&&text==='来月')||(p==='past'&&text==='過去');
+    const active=(p==='current'&&text==='今月')||(p==='next'&&text==='来月以降')||(p==='past'&&text==='過去');
     b.classList.toggle('on',active);
   });
   if(document.getElementById('adminEvents')) renderAdminLists();
@@ -530,7 +566,8 @@ function filtered(){
  return DATA.events.filter(e=>{
    const d=new Date(e.date+'T00:00:00'), ey=d.getFullYear(), em=d.getMonth();
    if(period==='current')return ey===y&&em===m;
-   if(period==='next'){let nm=m+1,ny=y;if(nm>11){nm=0;ny++}return ey===ny&&em===nm}
+   // 「来月以降」は翌月だけでなく、翌月以降のすべての未来の行事を表示
+   if(period==='next')return d>=new Date(y,m+1,1);
    return d<new Date(y,m,1);
  });
 }
@@ -539,14 +576,15 @@ function renderEvents(){
  box.innerHTML=a.length?a.map(eventCard).join(''):`<div class="empty">この期間の行事はありません</div>`;
 }
 function eventCard(e){
+ const canceled=!!e.canceled;
  const key=e.id+'||'+currentMember,my=DATA.answers[key]?.answer||'',c=counts(e.id);
- const rows=DATA.members.map(n=>{const d=DATA.answers[e.id+'||'+n]||{};return `<div class="member-row"><div class="member-name">${esc(n)}</div><div class="actual-mini">${d.actual?'✓ 出席':''}</div><div class="manswer" style="${ansStyle(d.answer)}">${d.answer||'－'}</div></div>`}).join('');
+ const rows=DATA.members.map(n=>{const d=DATA.answers[e.id+'||'+n]||{};return `<div class="member-row"><div class="member-name">${esc(n)}</div>${canceled?`<div></div><div class="manswer"><span class="cancel-tag">中止</span></div>`:`<div class="actual-mini">${d.actual?'✓ 出席':''}</div><div class="manswer" style="${ansStyle(d.answer)}">${d.answer||'－'}</div>`}</div>`}).join('');
  return `<section class="event"><div class="date">${fmt(e.date)}</div><div class="title">${esc(e.title)}</div>
  ${e.location||e.supplies?`<div class="info">${e.location?`<div class="loc">📍 集合場所<br>${esc(e.location)}</div>`:''}${e.supplies?`<div class="sup">🧤 持ち物<br>${esc(e.supplies).replace(/\n/g,'<br>')}</div>`:''}</div>`:''}
- <div class="answer-title">${esc(currentMember)} さんの回答</div>
+ ${canceled?`<div class="cancel-banner">⊘ この行事は中止になりました<small>出欠の回答は不要です</small></div>`:`<div class="answer-title">${esc(currentMember)} さんの回答</div>
  <div class="answers"><button class="ab ok ${my==='○'?'sel':''}" onclick="setMyAnswer('${js(e.id)}','○')">○<small>参加</small></button><button class="ab maybe ${my==='△'?'sel':''}" onclick="setMyAnswer('${js(e.id)}','△')">△<small>未定</small></button><button class="ab no ${my==='×'?'sel':''}" onclick="setMyAnswer('${js(e.id)}','×')">×<small>欠席</small></button></div>
  <div class="status">${my?'現在：'+my:'まだ回答していません'}</div>
- <div class="summary"><div class="sum">○ 参加<b>${c.ok}</b></div><div class="sum">△ 未定<b>${c.maybe}</b></div><div class="sum">× 欠席<b>${c.no}</b></div><div class="sum">✓ 出席<b>${c.actual}</b></div></div>
+ <div class="summary"><div class="sum">○ 参加<b>${c.ok}</b></div><div class="sum">△ 未定<b>${c.maybe}</b></div><div class="sum">× 欠席<b>${c.no}</b></div><div class="sum">✓ 出席<b>${c.actual}</b></div></div>`}
  <div class="answer-title">👥 団員の回答</div><div class="member-list">${rows}</div></section>`;
 }
 async function setMyAnswer(id,val){
@@ -638,7 +676,7 @@ function renderAdmin(){
  document.getElementById('app').innerHTML=`<header class="header"><div class="header-in"><div class="logo">🔧 管理者</div><button class="topbtn" onclick="renderUser()">使用者</button></div></header><main class="main">
  <section class="adminbox"><div class="section-title">📅 行事を追加</div><input id="edate" class="input" type="date"><input id="etitle" class="input" placeholder="行事名"><input id="eloc" class="input" placeholder="集合場所"><textarea id="esup" class="input" placeholder="持ち物"></textarea><button class="wide dark" onclick="addEvent()">＋ 行事を追加</button></section>
  <section class="adminbox"><div class="section-title">👥 団員を追加</div><input id="mname" class="input" placeholder="団員名"><button class="wide dark" onclick="addMember()">＋ 団員を追加</button></section>
- <section class="adminbox"><div class="section-title">📅 出欠・実参加管理</div><div class="tabs">${tab('current','今月')}${tab('next','来月')}${tab('past','過去')}</div><div id="adminEvents"></div></section>
+ <section class="adminbox"><div class="section-title">📅 出欠・実参加管理</div><div class="tabs">${tab('current','今月')}${tab('next','来月以降')}${tab('past','過去')}</div><div id="adminEvents"></div></section>
  <section class="adminbox"><div class="section-title">👥 団員一覧</div><div id="adminMembers"></div></section>
  </main>`;
  renderAdminLists();
@@ -660,8 +698,9 @@ function adminEvent(e){
  }).join('');
  return `<div class="admin-event"><div class="admin-title">${esc(e.title)}</div><div class="admin-sub">${fmt(e.date)}</div>
  ${e.location||e.supplies?`<div class="info" style="margin-top:8px">${e.location?`<div class="loc">📍 ${esc(e.location)}</div>`:''}${e.supplies?`<div class="sup">🧤 ${esc(e.supplies)}</div>`:''}</div>`:''}
- <div class="admin-summary">○ ${c.ok}人　△ ${c.maybe}人　× ${c.no}人　✓出席 ${c.actual}人</div>${people}
- <div class="actionrow"><button class="light" onclick="editEvent('${js(e.id)}')">編集</button><button class="red" onclick="delEvent('${js(e.id)}')">削除</button></div></div>`;
+ ${e.canceled?'<div class="cancel-banner">⊘ 中止中</div>':`<div class="admin-summary">○ ${c.ok}人　△ ${c.maybe}人　× ${c.no}人　✓出席 ${c.actual}人</div>${people}`}
+ <div class="actionrow"><button class="light" onclick="editEvent('${js(e.id)}')">編集</button><button class="${e.canceled?'dark':'red'}" onclick="toggleEventCancel('${js(e.id)}',${!e.canceled})">${e.canceled?'中止を解除':'中止にする'}</button></div>
+ <div class="actionrow"><button class="red" onclick="delEvent('${js(e.id)}')">削除</button></div></div>`;
 }
 async function adminAnswer(id,member,val){
  const key=id+'||'+member,old=DATA.answers[key]?.answer||'';if(old===val)return;
@@ -700,10 +739,38 @@ async function addEvent(){
   setTimeout(()=>document.getElementById('edate')?.focus(),50);
 }catch(e){toast(e.message)}finally{setLoading(false)}
 }
-async function editEvent(id){
+function editEvent(id){
  const e=DATA.events.find(x=>String(x.id)===String(id));if(!e)return;
- const d=prompt('日付',e.date);if(d===null)return;const t=prompt('行事名',e.title);if(t===null)return;const l=prompt('集合場所',e.location||'');if(l===null)return;const s=prompt('持ち物',e.supplies||'');if(s===null)return;
- setLoading(true,'更新しています…');try{const r=await jsonp('updateEvent',{pin:adminPin,eventId:id,date:d,title:t,location:l,supplies:s});DATA=r.data;renderAdminLists();toast('✓ 更新しました')}catch(e){toast(e.message)}finally{setLoading(false)}
+ closeEventEditor();
+ const modal=document.createElement('div');modal.id='eventEditModal';modal.className='edit-overlay';
+ modal.innerHTML=`<div class="edit-panel" role="dialog" aria-modal="true" aria-label="行事を編集">
+   <div class="edit-heading">行事を編集</div>
+   <label class="edit-label" for="editDate">日付</label><input id="editDate" class="input" type="date" value="${esc(e.date)}">
+   <label class="edit-label" for="editTitle">行事名</label><input id="editTitle" class="input" maxlength="120" value="${esc(e.title)}" placeholder="行事名">
+   <label class="edit-label" for="editLocation">集合場所</label><input id="editLocation" class="input" value="${esc(e.location||'')}" placeholder="集合場所">
+   <label class="edit-label" for="editSupplies">持ち物</label><textarea id="editSupplies" class="input" placeholder="持ち物">${esc(e.supplies||'')}</textarea>
+   <div class="edit-actions"><button class="light" onclick="closeEventEditor()">キャンセル</button><button class="dark" onclick="saveEventEdit('${js(e.id)}')">変更を保存</button></div>
+ </div>`;
+ modal.addEventListener('click',ev=>{if(ev.target===modal)closeEventEditor()});
+ document.body.appendChild(modal);
+}
+function closeEventEditor(){document.getElementById('eventEditModal')?.remove()}
+async function saveEventEdit(id){
+ const d=val('editDate'),t=val('editTitle'),l=val('editLocation'),s=val('editSupplies');
+ if(!d||!t){toast('日付と行事名を入力してください');return}
+ setLoading(true,'更新しています…');
+ try{
+   const r=await jsonp('updateEvent',{pin:adminPin,eventId:id,date:d,title:t,location:l,supplies:s});
+   DATA=r.data;closeEventEditor();renderAdminLists();toast('✓ 行事を更新しました');
+ }catch(e){toast(e.message)}finally{setLoading(false)}
+}
+async function toggleEventCancel(id,canceled){
+ const e=DATA.events.find(x=>String(x.id)===String(id));if(!e)return;
+ const msg=canceled?`「${e.title}」を中止にしますか？\n団員の回答データは削除せず、利用者画面では「中止」と表示します。`:`「${e.title}」の中止を解除して、出欠回答を再開しますか？`;
+ if(!confirm(msg))return;
+ setLoading(true,canceled?'中止にしています…':'中止を解除しています…');
+ try{const r=await jsonp('cancelEvent',{pin:adminPin,eventId:id,canceled});DATA=r.data;renderAdminLists();toast(canceled?'✓ 行事を中止にしました':'✓ 中止を解除しました')}
+ catch(err){toast(err.message)}finally{setLoading(false)}
 }
 async function delEvent(id){
  const e=DATA.events.find(x=>String(x.id)===String(id));if(!e||!confirm('「'+e.title+'」を削除しますか？\\n出欠データも削除されます。'))return;
